@@ -1,0 +1,158 @@
+using System.Collections;
+using Unity.VisualScripting;
+using UnityEngine;
+using UnityEngine.InputSystem;
+
+public class PlayerController : MonoBehaviour
+{
+    private Rigidbody rb;
+    private PlayerInput playerInput;
+    private InputAction JumpAction;
+
+    private bool isGrounded;                    // track if player is grounded
+    private bool isMoving;                      // track if player is moving
+
+    private float speedNormal;                  // factor to reduce speed when max speed exceeded
+    private float movementX;
+    private float movementY;
+    private float currentSpeed;                 // current speed of the rigidbody
+    private float jumpForce;                    // ACTUAL force applied when jumping
+
+    [SerializeField] private Vector3 popForceDirection = Vector3.up;
+    [SerializeField] private float popForceStrength = 10f;
+
+    public float minSpeed = 1.0f;               // minimum force applied to the rigidbody
+    public float medSpeed = 2.5f;               // median force applied to the rigidbody
+    public float maxSpeed = 12.0f;              // maximum force applied to the rigidbody
+    public float baseJumpForce = 5.0f;          // base multiplier - force applied when jumping
+
+    void Start()
+    {
+        rb = GetComponent<Rigidbody>();
+        playerInput = GetComponent<PlayerInput>();
+
+        speedNormal = 1.2f;
+
+        JumpAction = playerInput.actions["Jump"];
+    }
+
+    void Update()
+    {
+        if (JumpAction.triggered && isGrounded)
+        {
+            PlayerJump();
+        }
+    }
+
+    void OnMove(InputValue movementValue)
+    {
+        Vector2 movementVector = movementValue.Get<Vector2>();
+
+        movementX = movementVector.x; // store x value
+        movementY = movementVector.y; // store y value
+    }
+    private void FixedUpdate()
+    {
+        jumpForce = baseJumpForce * (Mathf.Round(currentSpeed) / 2);
+
+        IsPlayerMoving();
+
+        if (!isMoving)
+        {
+            jumpForce = baseJumpForce;
+        }
+        else
+        {
+            jumpForce = baseJumpForce * 1.2f;
+        }
+
+        currentSpeed = Mathf.Round(rb.linearVelocity.magnitude);
+        Vector3 movement = new Vector3(movementX, 0.0f, movementY);
+        rb.AddForce(movement * (currentSpeed + minSpeed / medSpeed));
+        if (currentSpeed > maxSpeed)
+        {
+            rb.linearVelocity = Vector3.Lerp(rb.linearVelocity, rb.linearVelocity.normalized * maxSpeed / speedNormal, 0.5f);
+            Debug.Log("Max Speed Exceeded: " + currentSpeed + "Normalizing.");
+        }
+    }
+    private void OnCollisionEnter(Collision other)
+    {
+        if (other.gameObject.CompareTag("Player"))
+        {
+            Rigidbody targetRb = other.rigidbody;
+            if (targetRb != null)
+            {
+                VelocityPop(targetRb);
+            }
+        }
+
+        GroundCheck();
+        if (other.gameObject.CompareTag("BouncePlayer"))
+        {
+            PopForce();
+        }
+    }
+    private void OnCollisionExit(Collision collision)
+    {
+        GroundCheck();
+    }
+    // PLACE CUSTOM FUNCTIONS BELOW
+
+    private void GroundCheck()
+    {
+        if (isGrounded)
+        {
+            isGrounded = false;
+            Debug.Log("Player is AIRBORNE.");
+        }
+
+        if (!isGrounded)
+        {
+            isGrounded = true;
+            Debug.Log("Player is GROUNDED.");
+        }
+    }
+
+    private void IsPlayerMoving()
+    {
+        if (currentSpeed > minSpeed)
+        {
+            isMoving = true;
+            Debug.Log("I AM IN MOTION" + "Current Velocity: " + currentSpeed);
+        }
+        else
+        {
+            if (isMoving && currentSpeed < minSpeed)
+            {
+                isMoving = false;
+            }
+        }
+    }
+
+    private void PlayerJump()
+    {
+        if (JumpAction.triggered && isGrounded)
+        {
+            rb.AddForce(Vector3.up * baseJumpForce, ForceMode.Impulse);
+            isGrounded = false;
+            Debug.Log("Player JUMPED.");
+        }
+    }
+
+    private void PopForce()
+    {
+        rb.AddForce(Vector3.up * (Mathf.Round(baseJumpForce * currentSpeed) / 2), ForceMode.Impulse);
+        Debug.Log("Player WWWwwwooooOOPP.");
+    }
+
+    void VelocityPop(Rigidbody target)
+    {
+        float currentSpeed = rb.linearVelocity.magnitude;
+        float targetSpeed = target.linearVelocity.magnitude;
+
+        if (currentSpeed > targetSpeed)
+        {
+            target.AddForce(popForceDirection * popForceStrength, ForceMode.Impulse);
+        }
+    }
+}
