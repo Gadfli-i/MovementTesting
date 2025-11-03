@@ -1,0 +1,102 @@
+using System.Collections;
+using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Processors;
+
+public class PlayerController : MonoBehaviour
+{
+    private Rigidbody rb;
+    private PlayerInput playerInput;
+    private InputAction JumpAction;
+    private Vector3 popForceDirection = Vector3.up;             // direction of the pop force
+    private float movementX;                                    // used to store x value
+    private float movementY;                                    // used to store y value
+    private bool isGrounded;                                    // track if player is grounded
+    private bool isMoving;                                      // track if player is moving
+    private float currentSpeed;                                 // current speed of the rigidbody
+    private float JumpForce;                                    // ACTUAL force applied when jumping
+    [SerializeField] private float baseJumpForce = 8.0f;        // base multiplier - force applied when jumping
+    [SerializeField] private float popForceStrength = 15f;      // strength of the pop force
+    [SerializeField] private float speed = 12.0f;               // base force applied to the rigidbody
+    [SerializeField] private float maxSpeed = 15.0f;            // maximum speed limit for the rigidbody
+
+    void Start()
+    {
+        rb = GetComponent<Rigidbody>();
+        playerInput = GetComponent<PlayerInput>();
+        JumpAction = playerInput.actions["Jump"];
+    }
+
+    void Update()
+    {
+        if (JumpAction.triggered && isGrounded)
+        {
+            rb.AddForce(Vector3.up * JumpForce, ForceMode.Impulse);
+        }
+    }
+    private void OnMove(InputValue movementValue)
+    {
+        Vector2 movementVector = movementValue.Get<Vector2>();
+        movementX = movementVector.x; // store x value
+        movementY = movementVector.y; // store y value
+    }
+
+    private void FixedUpdate()
+    {
+        currentSpeed = Mathf.Round(rb.linearVelocity.magnitude);
+        if (currentSpeed > 0.1f)
+        {
+            JumpForce = baseJumpForce * 1.5f;
+            Debug.Log("Player is moving at speed: " + currentSpeed);
+        }
+        else
+        {
+            JumpForce = baseJumpForce;
+            Debug.Log("Player is NOT moving.");
+        }
+        Vector3 movement = new Vector3(movementX, 0.0f, movementY);
+        rb.AddForce(movement * (speed * Time.deltaTime) * 50);
+        if (currentSpeed > maxSpeed)
+        {
+            rb.linearVelocity = Vector3.Lerp(rb.linearVelocity, rb.linearVelocity.normalized * speed / 1.2f, 0.5f);
+            Debug.Log("Max Speed Exceeded: " + currentSpeed + "Normalizing.");
+        }
+    }
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (collision.gameObject.CompareTag("Player"))
+        {
+            Rigidbody targetRb = collision.rigidbody;
+            if (targetRb)
+            {
+                SpeedPop(targetRb);
+            }
+        }
+
+        if (collision.gameObject.CompareTag("BouncePlayer"))
+        {
+            PopForce();
+        }
+    }
+
+    private void OnCollisionStay(Collision collision)
+    {
+        isGrounded = true;
+    }
+
+    private void OnCollisionExit(Collision collision)
+    {
+        isGrounded = false;
+    }
+
+    private void SpeedPop(Rigidbody target)
+    {
+        target.AddForce(popForceDirection * popForceStrength, ForceMode.Impulse);
+    }
+
+    private void PopForce()
+    {
+        rb.AddForce(Vector3.up * (Mathf.Round(baseJumpForce * currentSpeed) / 2), ForceMode.Impulse);
+        Debug.Log("Player WWWwwwooooOOPP.");
+    }
+}
