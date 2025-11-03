@@ -32,8 +32,6 @@ public class PlayerController2 : MonoBehaviour
         playerInput = GetComponent<PlayerInput>();
         // get action references
         JumpAction = playerInput.actions["Jump"];
-        // initialize variables
-        speedNormal = 1.2f;
     }
 
     void Update()
@@ -42,7 +40,7 @@ public class PlayerController2 : MonoBehaviour
         if (JumpAction.triggered && isGrounded)
         {
             // apply jump force to rigidbody
-            rb.AddForce(Vector3.up * baseJumpForce, ForceMode.Impulse);
+            rb.AddForce(Vector3.up * JumpForce, ForceMode.Impulse);
         }
     }
     private void OnMove(InputValue movementValue)
