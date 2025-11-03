@@ -91,7 +91,7 @@ public class PlayerController : MonoBehaviour
 
     private void SpeedPop(Rigidbody target)
     {
-        target.AddForce(popForceDirection * popForceStrength, ForceMode.Impulse);
+        target.AddForce(popForceDirection * (currentSpeed * 1.25f), ForceMode.Impulse);
     }
 
     private void PopForce()
